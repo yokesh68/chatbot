@@ -1,0 +1,1048 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAWEN - Aadhaar Awareness Game</title>
+    <!-- Use Tailwind CSS for responsive utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            background: linear-gradient(to bottom, #87CEEB 0%, #B0E0E6 100%);
+            /* Prevent scrollbars from animated clouds */
+            overflow: hidden;
+            color: #E2E8F0;
+        }
+        /* Custom scrollbar for the chat area */
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background-color: #4a5568;
+            border-radius: 3px;
+        }
+        .chat-container::-webkit-scrollbar-track {
+            background-color: #2d3748;
+        }
+        /* Modal transition effects */
+        .modal {
+            transition: opacity 0.3s ease-in-out;
+        }
+        .pulse-once {
+            animation: pulse-once 0.8s cubic-bezier(0.4, 0, 0.6, 1);
+        }
+        @keyframes pulse-once {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        /* Style for disabled hint button */
+        #hint-btn:disabled {
+            background-color: #4a5568;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        /* Speaker and Lang icon styling */
+        .speaker-icon, .lang-switch-icon {
+            cursor: pointer;
+            margin-left: 8px;
+            display: inline-block;
+            vertical-align: middle;
+            opacity: 0.7;
+            transition: opacity 0.2s, transform 0.2s;
+        }
+        .speaker-icon:hover, .lang-switch-icon:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        /* Loading state for speaker icon */
+        .speaker-icon.loading svg {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+        /* Bot avatar styling */
+        .bot-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 12px;
+            flex-shrink: 0;
+            background-color: #4a5568;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #4a5568;
+        }
+        /* Cloud animation and styling */
+        #clouds {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .cloud {
+            position: absolute;
+            background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA5NiA5NiI+PHBhdGggZD0iTTc5LjE2Myw1MS4wNDhjLTEuMzY2LDAtMi43MTUtLjIwNi00LjAyNS0uNjE4Yy0uNzU4LTYuODYtNi40MTgtMTIuMjctMTMuNDY4LTEyLjI3Yy0uNTQsMC0xLjA3MS4wNDItMS41OTQuMTI0QzU4Ljk0MywyNy4yMzIsNTAuMjI0LDE5LDM5LjY4NCwxOWMtMTEuNDQxLDAtMjAuODMzLDguNzEtMjEuNzY4LDIwLjAyMWMtLjMyNi0uMDE4LS42NTItLjAyMS0uOTg1LS4wMjFjLTcuNzgyLDAtMTQuMDkyLDYuMzEtMTQuMDkyLDE0LjA5MmMwLDcuNzgyLDYuMzEsMTQuMDkyLDE0LjA5MiwxNC4wOTJoNjIuMjMyYzYuNjQ1LDAsMTIuMDQxLTUuMzk2LDEyLjA0MS0xMi4wNDFDMTEuMjA0LDU2LjQ0NCw4NS44MDgsNTEuMDQ4LDc5LjE2Myw1MS4wNDh6IiBmaWxsPSIjRkZGRkZGIiBvcGFjaXR5PSIwLjciLz48L3N2Zz4=');
+            background-repeat: no-repeat;
+            background-size: contain;
+            animation-name: moveClouds;
+            animation-timing-function: linear;
+            animation-iteration-count: infinite;
+        }
+        .cloud-1 { width: 200px; height: 120px; top: 10%; animation-duration: 35s; animation-delay: -5s; }
+        .cloud-2 { width: 300px; height: 180px; top: 25%; animation-duration: 25s; animation-delay: -15s; }
+        .cloud-3 { width: 150px; height: 90px; top: 65%; animation-duration: 45s; animation-delay: -2s; }
+        .cloud-4 { width: 250px; height: 150px; top: 80%; animation-duration: 30s; animation-delay: -10s; }
+
+        @keyframes moveClouds {
+            0% { transform: translateX(100vw); }
+            100% { transform: translateX(-300px); }
+        }
+        /* Captcha code styling */
+        .captcha-code {
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.5rem;
+            letter-spacing: 5px;
+            text-decoration: line-through;
+            user-select: none;
+            color: #E2E8F0;
+        }
+        
+        /* Progress Bar and Score Styling */
+        .progress-container {
+            width: 100%;
+            background-color: #4a5568;
+            border-radius: 9999px;
+            height: 10px;
+            margin-top: 4px;
+        }
+        .progress-bar {
+            background-color: #4ade80; /* green-400 */
+            height: 10px;
+            border-radius: 9999px;
+            width: 0%;
+            transition: width 0.5s ease-in-out;
+        }
+        .score-display {
+            font-weight: 700;
+            color: #FBBF24; /* amber-400 */
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            align-items: center;
+        }
+        .typing-indicator span {
+            height: 8px;
+            width: 8px;
+            background-color: #9CA3AF; /* gray-400 */
+            border-radius: 50%;
+            display: inline-block;
+            margin: 0 2px;
+            animation: bounce 1.4s infinite ease-in-out both;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes bounce {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1.0); }
+        }
+
+        /* Confetti Celebration Styles */
+        #confetti-container {
+            overflow: hidden;
+        }
+        .confetti {
+            position: absolute;
+            opacity: 1;
+            animation: fall linear forwards;
+        }
+        @keyframes fall {
+            0% {
+                transform: translateY(0vh) rotateZ(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(110vh) rotateZ(720deg);
+                opacity: 0;
+            }
+        }
+        
+        /* UPDATED: Bubble content layout */
+        .bubble-content {
+            display: flex;
+            flex-direction: column;
+        }
+        .message-text {
+            flex-grow: 1;
+            padding-bottom: 8px;
+            /* Add transition for smoother text changes */
+            transition: opacity 0.2s ease-in-out;
+        }
+        .bubble-controls {
+            display: flex;
+            justify-content: space-between; /* Pushes toggles left, speaker right */
+            align-items: center;
+            margin-top: 4px;
+            padding-top: 4px;
+            border-top: 1px solid rgba(107, 114, 128, 0.3);
+        }
+        /* NEW: Language Toggle Buttons Styling */
+        .lang-toggle-btn {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            background-color: #4a5568;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            border: 1px solid #6b7280;
+        }
+        .lang-toggle-btn:hover {
+            border-color: #a5b4fc;
+        }
+        .lang-toggle-btn.active {
+            color: white;
+            background-color: #4F46E5;
+            border-color: transparent;
+            transform: scale(1.05);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4 text-gray-200">
+
+    <!-- Background clouds -->
+    <div id="clouds">
+        <div class="cloud cloud-1"></div>
+        <div class="cloud cloud-2"></div>
+        <div class="cloud cloud-3"></div>
+        <div class="cloud cloud-4"></div>
+    </div>
+
+    <!-- NEW: Confetti container -->
+    <div id="confetti-container" class="fixed inset-0 pointer-events-none z-30"></div>
+
+    <!-- Main Game Container -->
+    <div class="w-full max-w-2xl min-h-screen lg:h-[90vh] flex flex-col bg-gray-800/80 backdrop-blur-sm rounded-2xl shadow-2xl overflow-hidden border border-gray-700 relative z-10">
+        <!-- Header -->
+        <div class="bg-gray-700/80 p-4 grid grid-cols-3 items-center border-b border-gray-600">
+            <div class="flex justify-start">
+                 <!-- UPDATED: Using a placeholder image for the logo -->
+                <img src="https://placehold.co/40x40/4F46E5/FFFFFF?text=R&font=inter" alt="RAWEN Logo" class="h-10 w-10 rounded-full">
+            </div>
+            <div class="text-center">
+                <h1 class="text-xl font-bold text-white">RAWEN 🤖</h1>
+                <p class="text-sm text-green-400">Online</p>
+            </div>
+            <div class="flex justify-end items-center text-right">
+                <span id="level-display" class="text-lg mr-4">Level: 1 / 4</span>
+                <span id="score-display" class="score-display text-lg">Score: 0</span>
+            </div>
+        </div>
+
+        <!-- NEW: Progress Bar -->
+        <div class="p-2 bg-gray-700/50">
+            <div class="progress-container">
+                <div id="progress-bar" class="progress-bar"></div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div id="chat-container" class="flex-1 p-6 overflow-y-auto chat-container">
+            <!-- Messages will be appended here -->
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 bg-gray-800/80 border-t border-gray-700">
+            <div class="flex items-center space-x-2">
+                <input type="text" id="user-input" class="flex-1 bg-gray-700 text-white placeholder-gray-400 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Type your answer here...">
+                <button id="hint-btn" class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300">Hint</button>
+                <button id="send-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105">
+                    Send
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden opacity-0 z-20">
+        <div id="modal-content" class="bg-gray-800 border border-indigo-500 rounded-2xl p-8 max-w-lg w-full text-center shadow-2xl transform scale-95 transition-transform duration-300">
+            <div id="modal-icon" class="mx-auto bg-green-500 h-16 w-16 rounded-full flex items-center justify-center mb-4 text-4xl">
+                <!-- Icon will be set by JS -->
+            </div>
+            <h2 id="modal-title" class="text-2xl font-bold mb-4">Correct!</h2>
+            <div class="flex items-center justify-center">
+                <p id="modal-text" class="text-gray-300 mb-6 whitespace-pre-line text-left"></p>
+                <span id="modal-speaker-icon"></span>
+            </div>
+            <button id="next-level-btn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-xl transition duration-300 transform hover:scale-105">
+                Next Question
+            </button>
+        </div>
+    </div>
+    
+    <!-- Aadhaar Check Modal -->
+    <div id="aadhaar-check-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden opacity-0 z-50">
+        <div class="bg-gray-800 border border-indigo-500 rounded-2xl p-8 max-w-md w-full shadow-2xl transform scale-95 transition-transform duration-300">
+            <h2 class="text-2xl font-bold mb-2 text-center">Aadhaar Link Status Check (Simulation)</h2>
+            <p class="text-center text-sm text-yellow-400 mb-6">This is a practice simulation. No real data is used.</p>
+            
+            <!-- Step 1: Aadhaar Input -->
+            <div id="aadhaar-step-1">
+                <label for="aadhaar-number" class="block mb-2 text-sm font-medium text-gray-300">Enter your 12-digit Aadhaar Number</label>
+                <input type="text" id="aadhaar-number" class="w-full bg-gray-700 text-white p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="XXXX XXXX XXXX" maxlength="14">
+                <p id="aadhaar-error" class="text-red-400 text-sm mt-2 hidden">Please enter a valid 12-digit number.</p>
+                <button id="aadhaar-next-btn" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition">Next</button>
+            </div>
+
+            <!-- Step 2: Captcha -->
+            <div id="aadhaar-step-2" class="hidden">
+                <label for="captcha-input" class="block mb-2 text-sm font-medium text-gray-300">Enter the Captcha</label>
+                <div class="flex justify-center my-4">
+                    <div id="captcha-code" class="captcha-code"></div>
+                </div>
+                <input type="text" id="captcha-input" class="w-full bg-gray-700 text-white p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Enter code above">
+                    <p id="captcha-error" class="text-red-400 text-sm mt-2 hidden">Incorrect Captcha. Please try again.</p>
+                <button id="captcha-verify-btn" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition">Verify Captcha</button>
+            </div>
+
+            <!-- Step 3: OTP -->
+            <div id="aadhaar-step-3" class="hidden">
+                <label for="otp-input" class="block mb-2 text-sm font-medium text-gray-300">Enter 6-digit OTP sent to your mobile</label>
+                <input type="text" id="otp-input" class="w-full bg-gray-700 text-white p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="XXXXXX" maxlength="6">
+                <p id="otp-error" class="text-red-400 text-sm mt-2 hidden">Please enter a 6-digit OTP.</p>
+                <button id="otp-verify-btn" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition">Verify OTP</button>
+            </div>
+
+            <!-- Step 4: Result -->
+            <div id="aadhaar-step-4" class="hidden text-center">
+                <div class="mx-auto bg-green-500 h-16 w-16 rounded-full flex items-center justify-center mb-4 text-4xl">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold">Status: Linked!</h3>
+                <p class="text-gray-300 mt-2 mb-6">Congratulations! Your Aadhaar is linked to a bank account. <br><strong>Remember:</strong> You still need to visit your bank to confirm it is 'Seeded' for DBT.</p>
+                <button id="aadhaar-close-btn" class="w-full bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 rounded-xl transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Language Selection Modal -->
+    <div id="language-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden opacity-0 z-50">
+        <div id="language-modal-content" class="bg-gray-800 border border-indigo-500 rounded-2xl p-6 max-w-xs w-full text-center shadow-2xl transform scale-95 transition-transform duration-300">
+            <h3 class="text-lg font-semibold mb-4">Choose Voice Language</h3>
+            <div class="space-y-3">
+                <button onclick="speakInLanguage('en-US')" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300">English</button>
+                <button onclick="speakInLanguage('hi-IN')" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300">हिन्दी (Hindi)</button>
+                <button onclick="speakInLanguage('ta-IN')" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300">தமிழ் (Tamil)</button>
+            </div>
+            <button onclick="hideLanguageModal()" class="mt-4 text-gray-400 hover:text-white transition">Cancel</button>
+        </div>
+    </div>
+
+
+    <script>
+        // --- DOM Elements ---
+        const chatContainer = document.getElementById('chat-container');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const infoModal = document.getElementById('info-modal');
+        const modalContent = document.getElementById('modal-content');
+        const modalTitle = document.getElementById('modal-title');
+        const modalText = document.getElementById('modal-text');
+        const modalIcon = document.getElementById('modal-icon');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const modalSpeakerIcon = document.getElementById('modal-speaker-icon');
+        const languageModal = document.getElementById('language-modal');
+        const languageModalContent = document.getElementById('language-modal-content');
+        const progressBar = document.getElementById('progress-bar');
+        const scoreDisplay = document.getElementById('score-display');
+        const levelDisplay = document.getElementById('level-display');
+        
+        // Aadhaar Check Modal Elements
+        const aadhaarCheckModal = document.getElementById('aadhaar-check-modal');
+        const aadhaarStep1 = document.getElementById('aadhaar-step-1');
+        const aadhaarStep2 = document.getElementById('aadhaar-step-2');
+        const aadhaarStep3 = document.getElementById('aadhaar-step-3');
+        const aadhaarStep4 = document.getElementById('aadhaar-step-4');
+        const aadhaarNumberInput = document.getElementById('aadhaar-number');
+        const aadhaarNextBtn = document.getElementById('aadhaar-next-btn');
+        const aadhaarError = document.getElementById('aadhaar-error');
+        const captchaCode = document.getElementById('captcha-code');
+        const captchaInput = document.getElementById('captcha-input');
+        const captchaVerifyBtn = document.getElementById('captcha-verify-btn');
+        const captchaError = document.getElementById('captcha-error');
+        const otpInput = document.getElementById('otp-input');
+        const otpVerifyBtn = document.getElementById('otp-verify-btn');
+        const otpError = document.getElementById('otp-error');
+        const aadhaarCloseBtn = document.getElementById('aadhaar-close-btn');
+
+        // --- SVG Icons (for cleaner code) ---
+        const SPEAKER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-volume-up-fill" viewBox="0 0 16 16"><path d="M11.536 14.01A8.473 8.473 0 0 0 14.026 8a8.473 8.473 0 0 0-2.49-6.01l-.708.707A7.476 7.476 0 0 1 13.025 8c0 2.071-.84 3.946-2.197 5.303l.708.707z"/><path d="M10.121 12.596A6.48 6.48 0 0 0 12.025 8a6.48 6.48 0 0 0-1.904-4.596l-.707.707A5.482 5.482 0 0 1 11.025 8a5.482 5.482 0 0 1-1.61 3.89l.706.706z"/><path d="M8.707 11.182A4.486 4.486 0 0 0 10.025 8a4.486 4.486 0 0 0-1.318-3.182L8 5.525A3.489 3.489 0 0 1 9.025 8 3.49 3.49 0 0 1 8 10.475l.707.707zM6.717 3.55A.5.5 0 0 1 7 4v8a.5.5 0 0 1-.812.39L3.825 10.5H1.5A.5.5 0 0 1 1 10V6a.5.5 0 0 1 .5-.5h2.325l2.363-1.89a.5.5 0 0 1 .529-.06z"/></svg>`;
+        const BOT_AVATAR_SVG = `<svg class="h-8 w-8 text-indigo-300" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="8.5" cy="11.5" r="1.5"/><circle cx="15.5" cy="11.5" r="1.5"/><path d="M12 14c-2.33 0-4.31 1.46-5.11 3.5h10.22c-.8-2.04-2.78-3.5-5.11-3.5z"/></svg>`;
+        const CORRECT_ICON_SVG = `<svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+
+        // --- Game Content ---
+        const allQuestions = [
+            {
+                question: { en: "I have branches, but no fruit, trunk, or leaves. What am I?", hi: "मेरी शाखाएँ हैं, पर फल, तना या पत्ते नहीं। मैं क्या हूँ?", ta: "எனக்கு கிளைகள் உண்டு, ஆனால் பழம், தண்டு, அல்லது இலைகள் இல்லை. நான் யார்?" },
+                answers: ["bank", "बैंक"],
+                hint: { en: "Think of a place with tellers and vaults.", hi: "एक ऐसी जगह के बारे में सोचें जहाँ टेलर और तिजोरियाँ हों।", ta: "டெల్లர்கள் மற்றும் பெட்டகங்களைக் கொண்ட ஒரு இடத்தைப் பற்றி சிந்தியுங்கள்." },
+                info: { en: "Correct! The answer is a Bank.\n\nBut here's a key point: just Linking Aadhaar is for ID proof. For scholarships, your account needs to be 'Aadhaar Seeded' for Direct Benefit Transfer (DBT).\n\nWithout seeding, scholarship payments face delays. Always ask your bank: 'Is my account DBT-enabled and Aadhaar Seeded?'", hi: "सही! जवाब है बैंक।\n\nलेकिन यहाँ एक महत्वपूर्ण बात है: सिर्फ आधार लिंक करना पहचान प्रमाण के लिए है। छात्रवृत्ति के लिए, आपके खाते को डायरेक्ट बेनिफिट ट्रांसफर (डीबीटी) के लिए 'आधार सीडेड' होना चाहिए।\n\nसीडिंग के बिना, छात्रवृत्ति भुगतान में देरी होती है। हमेशा अपने बैंक से पूछें: 'क्या मेरा खाता डीबीटी-सक्षम और आधार सीडेड है?'", ta: "சரி! பதில் வங்கி.\n\nஆனால் இங்கே ஒரு முக்கிய குறிப்பு: ஆதார் இணைப்பது அடையாளச் சான்றுக்கு மட்டுமே. கல்வி உதவித்தொகைக்கு, உங்கள் கணக்கு நேரடிப் பலன் பரிமாற்றத்திற்காக (DBT) 'ஆதார் விதைக்கப்பட்டதாக' இருக்க வேண்டும்.\n\nவிதைக்கப்படாவிட்டால், கல்வி உதவித்தொகை செலுத்துவதில் தாமதம் ஏற்படும். எப்போதும் உங்கள் வங்கியிடம் கேளுங்கள்: 'எனது கணக்கு DBT-இயக்கப்பட்டது மற்றும் ஆதார் விதைக்கப்பட்டதா?'" }
+            },
+            {
+                question: { en: "For scholarships, your account needs to be enabled for D B T. What does 'B' stand for in DBT?", hi: "छात्रवृत्ति के लिए, आपके खाते को डी बी टी के लिए सक्षम होना चाहिए। डीबीटी में 'बी' का क्या अर्थ है?", ta: "கல்வி உதவித்தொகைக்கு, உங்கள் கணக்கு D B Tக்கு இயக்கப்பட்டிருக்க வேண்டும். DBTயில் 'B' என்பது எதைக் குறிக்கிறது?" },
+                answers: ["benefit", "बेनिफिट"],
+                hint: { en: "It's the 'B' in DBT, which you receive from a government scheme.", hi: "यह डीबीटी में 'बी' है, जो आपको एक सरकारी योजना से मिलता है।", ta: "இது DBTயில் உள்ள 'B', இது அரசாங்கத் திட்டத்திலிருந்து நீங்கள் பெறுவது." },
+                info: { en: "Exactly! DBT stands for Direct Benefit Transfer.\n\nThis is the system the government uses to send scholarship money and other subsidies directly to your Aadhaar-seeded bank account. It's fast, secure, and reduces errors.", hi: "बिल्कुल! डीबीटी का मतलब डायरेक्ट बेनिफिट ट्रांसफर है।\n\nयह वह प्रणाली है जिसका उपयोग सरकार छात्रवृत्ति के पैसे और अन्य सब्सिडी सीधे आपके आधार-सीडेड बैंक खाते में भेजने के लिए करती है। यह तेज़, सुरक्षित है और त्रुटियों को कम करता है।", ta: "சரியாக! DBT என்பது நேரடிப் பலன் பரிமாற்றம்.\n\nஅரசாங்கம் கல்வி உதவித்தொகை மற்றும் பிற மானியங்களை உங்கள் ஆதார்-விதைக்கப்பட்ட வங்கிக் கணக்கிற்கு நேரடியாக அனுப்பப் பயன்படுத்தும் அமைப்பு இது. இது வேகமானது, பாதுகாப்பானது மற்றும் பிழைகளைக் குறைக்கிறது." }
+            },
+            {
+                question: { en: "True or False: Linking your Aadhaar to a bank account automatically makes it ready for DBT scholarship payments.", hi: "सही या गलत: अपने आधार को बैंक खाते से लिंक करने से यह स्वचालित रूप से डीबीटी छात्रवृत्ति भुगतान के लिए तैयार हो जाता है।", ta: "சரி அல்லது தவறு: உங்கள் ஆதாரை வங்கிக் கணக்குடன் இணைப்பது தானாகவே DBT கல்வி உதவித்தொகை செலுத்துதல்களுக்குத் தயாராகிவிடும்." },
+                answers: ["false", "गलत"],
+                hint: { en: "Consider if official bank procedures are usually automatic or require a specific request.", hi: "विचार करें कि क्या आधिकारिक बैंक प्रक्रियाएं आमतौर पर தானாக हीं होंगी या एक विशेष अनुरोध की आवश्यकता होगी।", ta: "உறுதியான வங்கி நடைமுறைகள் பொதுவாக தானாகவே நடக்குமா அல்லது ஒரு குறிப்பிட்ட கோரிக்கை தேவையா என்பதைக் கவனியுங்கள்." },
+                info: { en: "You got it! It's FALSE.\n\nThis is the most common mistake. Linking and Seeding are two different processes. You must explicitly request your bank to 'Seed' your Aadhaar for DBT. Don't assume linking is enough!", hi: "आप समझ गए! यह गलत है।\n\nयह सबसे आम गलती है। लिंकिंग और सीडिंग दो अलग-अलग प्रक्रियाएं हैं। आपको डीबीटी के लिए अपने आधार को 'सीड' करने के लिए अपने बैंक से स्पष्ट रूप से अनुरोध करना होगा। यह न मानें कि लिंकिंग ही काफी है!", ta: "நீங்கள் சரியாகச் சொன்னீர்கள்! இது தவறு.\n\nஇது மிகவும் பொதுவான தவறு. இணைத்தல் மற்றும் விதைத்தல் இரண்டு வெவ்வேறு செயல்முறைகள். DBTக்காக உங்கள் ஆதாரை 'விதைக்க' உங்கள் வங்கியை நீங்கள் வெளிப்படையாகக் கோர வேண்டும். இணைப்பது மட்டும் போதும் என்று கருத வேண்டாம்!" }
+            },
+            {
+                question: { en: "Which is the MOST reliable way to confirm your account is DBT-enabled? (Type A, B, C, or D)\nA) Checking SMS\nB) Using a UPI app\nC) Visiting your bank branch\nD) Calling customer care", hi: "यह पुष्टि करने का सबसे विश्वसनीय तरीका कौन सा है कि आपका खाता डीबीटी-सक्षम है? (ए, बी, सी, या डी टाइप करें)\nए) एसएमएस की जांच करना\nबी) यूपीआई ऐप का उपयोग करना\nसी) अपनी बैंक शाखा में जाना\nडी) कस्टमर केयर को कॉल करना", ta: "உங்கள் கணக்கு DBT-இயக்கப்பட்டது என்பதை உறுதிப்படுத்த மிகவும் நம்பகமான வழி எது? (A, B, C, அல்லது D என தட்டச்சு செய்யவும்)\nA) SMS சரிபார்ப்பது\nB) UPI செயலியைப் பயன்படுத்துவது\nC) உங்கள் வங்கி கிளைக்குச் செல்வது\nD) வாடிக்கையாளர் சேவையை அழைப்பது" },
+                answers: ["c", "सी"],
+                hint: { en: "Which option involves talking to a person face-to-face for a guaranteed confirmation?", hi: "किस विकल्प में गारंटीकृत पुष्टि के लिए किसी व्यक्ति से आमने-सामने बात करना शामिल है?", ta: "உறுதியான உறுதிப்படுத்தலுக்கு ஒரு நபருடன் நேருக்கு நேர் பேசுவதை எந்த விருப்பம் உள்ளடக்கியது?" },
+                info: { en: "Perfect! The answer is C.\n\nWhile other methods might give clues, the only guaranteed way is to visit your bank branch and ask an official to confirm that your account is mapped in the NPCI database for DBT. This ensures your scholarship finds its way to you!", hi: "बहुत बढ़िया! जवाब है सी।\n\nहालांकि अन्य तरीके संकेत दे सकते हैं, लेकिन एकमात्र गारंटीकृत तरीका यह है कि आप अपनी बैंक शाखा में जाएं और एक अधिकारी से यह पुष्टि करने के लिए कहें कि आपका खाता डीबीटी के लिए एनपीसीआई डेटाबेस में मैप किया गया है। यह सुनिश्चित करता है कि आपकी छात्रवृत्ति आप तक पहुंच जाए!", ta: "சரியானது! பதில் C.\n\nமற்ற முறைகள் துப்புகளைத் தரக்கூடும், ஆனால் உங்கள் கணக்கு DBTக்காக NPCI தரவுத்தளத்தில் வரைபடமாக்கப்பட்டுள்ளது என்பதை உறுதிப்படுத்த உங்கள் வங்கிக் கிளைக்குச் சென்று ஒரு அதிகாரியிடம் கேட்பதே ஒரே உறுதியான வழியாகும். இது உங்கள் கல்வி உதவித்தொகை உங்களை வந்தடைவதை உறுதி செய்கிறது!" }
+            }
+        ];
+
+        // --- Game State ---
+        let currentQuestionIndex = 0;
+        let score = 0;
+        const HINT_PENALTY = 5;
+        const CORRECT_ANSWER_SCORE = 20;
+        
+        // --- TTS State ---
+        let textToSpeak = null;
+        let currentAudio = null;
+        let isSpeaking = false;
+
+        // --- Other State ---
+        let generatedCaptcha = '';
+        let audioCtx; // For sound effects
+
+        // --- Sound Effects ---
+        function playCorrectSound() {
+            if (!audioCtx) {
+                 audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(523.25, audioCtx.currentTime); // C5
+            gainNode.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + 0.5);
+
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.5);
+        }
+
+        // --- UI Update Functions ---
+        function updateScoreDisplay() {
+            scoreDisplay.textContent = `Score: ${score}`;
+        }
+
+        function updateLevelDisplay() {
+            if (currentQuestionIndex < allQuestions.length) {
+                levelDisplay.textContent = `Level: ${currentQuestionIndex + 1} / ${allQuestions.length}`;
+            } else {
+                levelDisplay.textContent = `Level: ${allQuestions.length} / ${allQuestions.length}`;
+            }
+        }
+        
+        function updateProgressBar() {
+            const progress = ((currentQuestionIndex) / allQuestions.length) * 100;
+            progressBar.style.width = `${progress}%`;
+        }
+        
+        // --- Gemini TTS Functions ---
+        const API_KEY = ""; // Kept empty as per instructions
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${API_KEY}`;
+        const VOICE_CONFIG = {
+            'en-US': { voiceName: 'Kore' }, // Firm voice for clarity
+            'hi-IN': { voiceName: 'Sadaltager' }, // Knowledgeable voice
+            'ta-IN': { voiceName: 'Achird' }, // Friendly voice
+        };
+
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+        
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const blockAlign = (numChannels * bitsPerSample) / 8;
+            const byteRate = sampleRate * blockAlign;
+            const dataSize = pcmData.byteLength;
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            // RIFF header
+            view.setUint32(0, 1380533830, false); // "RIFF"
+            view.setUint32(4, 36 + dataSize, true); // file size - 8
+            view.setUint32(8, 1463899717, false); // "WAVE"
+            // fmt chunk
+            view.setUint32(12, 1718449184, false); // "fmt "
+            view.setUint32(16, 16, true); // chunk size
+            view.setUint16(20, 1, true); // audio format (PCM)
+            view.setUint16(22, numChannels, true); // number of channels
+            view.setUint32(24, sampleRate, true); // sample rate
+            view.setUint32(28, byteRate, true); // byte rate
+            view.setUint16(32, blockAlign, true); // block align
+            view.setUint16(34, bitsPerSample, true); // bits per sample
+            // data chunk
+            view.setUint32(36, 1684108385, false); // "data"
+            view.setUint32(40, dataSize, true); // chunk size
+
+            new Uint8Array(buffer, 44).set(new Uint8Array(pcmData));
+            return new Blob([view], { type: 'audio/wav' });
+        }
+        
+        async function speakWithGemini(text, lang, speakerElement) {
+            if (isSpeaking) {
+                if (currentAudio) currentAudio.pause();
+                isSpeaking = false;
+                document.querySelectorAll('.speaker-icon.loading').forEach(el => el.classList.remove('loading'));
+                return;
+            }
+
+            isSpeaking = true;
+            speakerElement.classList.add('loading');
+
+            const payload = {
+                contents: [{ parts: [{ text: text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: { prebuiltVoiceConfig: VOICE_CONFIG[lang] }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error(`API error: ${response.statusText}`);
+
+                const result = await response.json();
+                const audioData = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+                const mimeType = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.mimeType;
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    if (!sampleRateMatch) throw new Error("Sample rate not found in mimeType");
+                    const sampleRate = parseInt(sampleRateMatch[1], 10);
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    const wavBlob = pcmToWav(pcmData, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    currentAudio = new Audio(audioUrl);
+                    currentAudio.play();
+                    currentAudio.onended = () => {
+                        isSpeaking = false;
+                        speakerElement.classList.remove('loading');
+                        URL.revokeObjectURL(audioUrl);
+                    };
+                } else {
+                    throw new Error("Invalid audio data received.");
+                }
+            } catch (error) {
+                console.error("TTS failed:", error);
+                isSpeaking = false;
+                speakerElement.classList.remove('loading');
+            }
+        }
+
+        // --- Chat Functions ---
+        function addMessage(textObj, sender, isRaw = false) {
+             // Remove any existing typing indicator
+            const existingIndicator = document.getElementById('typing-indicator');
+            if (existingIndicator) {
+                existingIndicator.remove();
+            }
+
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('mb-4', 'flex', 'items-end');
+            
+            if (sender === 'user') {
+                messageDiv.classList.add('justify-end');
+            } else {
+                messageDiv.classList.add('justify-start');
+                const avatar = document.createElement('div');
+                avatar.className = 'bot-avatar';
+                avatar.innerHTML = BOT_AVATAR_SVG;
+                messageDiv.appendChild(avatar);
+            }
+
+            const bubble = document.createElement('div');
+            bubble.classList.add('px-4', 'py-3', 'rounded-xl', 'max-w-xs', 'lg:max-w-md', 'break-words');
+            
+            if (sender === 'user') {
+                bubble.classList.add('bg-indigo-600', 'text-white', 'rounded-br-none');
+                bubble.textContent = textObj;
+            } else {
+                bubble.classList.add('bg-gray-700', 'text-white', 'rounded-bl-none', 'bubble-content');
+
+                const messageText = document.createElement('div');
+                messageText.className = 'message-text';
+                
+                const availableLangs = ['en'];
+                if (textObj.hi) availableLangs.push('hi');
+                if (textObj.ta) availableLangs.push('ta');
+
+                // Store all versions of the text on the messageText element's dataset
+                availableLangs.forEach(lang => {
+                    messageText.dataset[lang] = isRaw ? textObj[lang].replace(/\n/g, '<br>') : textObj[lang];
+                });
+                
+                messageText.innerHTML = messageText.dataset.en; // Set initial text
+
+                bubble.appendChild(messageText);
+
+                // --- Controls Container ---
+                const controlsContainer = document.createElement('div');
+                controlsContainer.className = 'bubble-controls';
+
+                const langToggles = document.createElement('div');
+                langToggles.className = 'flex items-center gap-2';
+
+                if (availableLangs.length > 1) {
+                     availableLangs.forEach(lang => {
+                        const langBtn = document.createElement('span');
+                        langBtn.className = 'lang-toggle-btn';
+                        langBtn.textContent = lang.toUpperCase();
+                        langBtn.dataset.lang = lang;
+                        if (lang === 'en') langBtn.classList.add('active');
+                        langToggles.appendChild(langBtn);
+                    });
+
+                    // Use event delegation on the container for efficiency
+                    langToggles.addEventListener('click', (e) => {
+                        if (e.target.matches('.lang-toggle-btn')) {
+                            const selectedLang = e.target.dataset.lang;
+                            // Fade out, change text, fade in
+                            messageText.style.opacity = 0;
+                            setTimeout(() => {
+                                messageText.innerHTML = messageText.dataset[selectedLang];
+                                messageText.style.opacity = 1;
+                            }, 200);
+                            
+                            // Update active button state
+                            langToggles.querySelectorAll('.lang-toggle-btn').forEach(btn => btn.classList.remove('active'));
+                            e.target.classList.add('active');
+                        }
+                    });
+                }
+                
+                controlsContainer.appendChild(langToggles);
+
+                const speaker = document.createElement('span');
+                speaker.className = 'speaker-icon';
+                speaker.innerHTML = SPEAKER_SVG;
+                speaker.onclick = () => showLanguageModal(textObj, speaker);
+                
+                controlsContainer.appendChild(speaker);
+                bubble.appendChild(controlsContainer);
+            }
+            
+            messageDiv.appendChild(bubble);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function showTypingIndicator() {
+            const messageDiv = document.createElement('div');
+            messageDiv.id = 'typing-indicator';
+            messageDiv.classList.add('mb-4', 'flex', 'items-end', 'justify-start');
+
+            const avatar = document.createElement('div');
+            avatar.className = 'bot-avatar';
+            avatar.innerHTML = BOT_AVATAR_SVG;
+            messageDiv.appendChild(avatar);
+
+            const bubble = document.createElement('div');
+            bubble.classList.add('px-4', 'py-3', 'rounded-xl', 'bg-gray-700', 'rounded-bl-none');
+            bubble.innerHTML = `
+                <div class="typing-indicator">
+                    <span></span><span></span><span></span>
+                </div>
+            `;
+            messageDiv.appendChild(bubble);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // --- Modal Functions ---
+        function showInfoModal() {
+            triggerConfetti(); // ADDED: Trigger celebration on correct answer
+            const currentQuestion = allQuestions[currentQuestionIndex];
+            const info = currentQuestion.info;
+            modalIcon.innerHTML = CORRECT_ICON_SVG;
+            modalText.textContent = info.en;
+            
+            const speaker = document.createElement('span');
+            speaker.className = 'speaker-icon';
+            speaker.innerHTML = SPEAKER_SVG;
+            modalSpeakerIcon.innerHTML = ''; // Clear previous icon
+            modalSpeakerIcon.appendChild(speaker);
+            speaker.onclick = () => showLanguageModal(info, speaker);
+
+            infoModal.classList.remove('hidden');
+            setTimeout(() => {
+                infoModal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('pulse-once');
+            }, 10);
+        }
+
+        function hideInfoModal() {
+            infoModal.classList.add('opacity-0');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                infoModal.classList.add('hidden');
+            }, 300);
+            if (currentAudio) currentAudio.pause();
+            isSpeaking = false;
+        }
+
+        function showLanguageModal(textObj, speakerElement) {
+            textToSpeak = { text: textObj, el: speakerElement };
+            languageModal.classList.remove('hidden');
+            setTimeout(() => {
+                languageModal.classList.remove('opacity-0');
+                languageModalContent.classList.remove('scale-95');
+            }, 10);
+        }
+
+        function hideLanguageModal() {
+            languageModal.classList.add('opacity-0');
+            languageModalContent.classList.add('scale-95');
+            setTimeout(() => {
+                languageModal.classList.add('hidden');
+            }, 300);
+        }
+        
+        function speakInLanguage(lang) {
+            if (textToSpeak && textToSpeak.text) {
+                const langKey = lang.substring(0, 2); // 'en' from 'en-US'
+                if (textToSpeak.text[langKey]) {
+                    speakWithGemini(textToSpeak.text[langKey], lang, textToSpeak.el);
+                }
+            }
+            hideLanguageModal();
+        }
+
+        // --- NEW: Confetti Function ---
+        function triggerConfetti() {
+            const container = document.getElementById('confetti-container');
+            if (!container) return;
+            container.innerHTML = ''; // Clear previous confetti
+
+            const colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#03a9f4', '#00bcd4', '#009688', '#4caf50', '#8bc34a', '#cddc39', '#ffeb3b', '#ffc107', '#ff9800'];
+            const confettiCount = 100;
+
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.left = `${Math.random() * 100}vw`;
+                confetti.style.top = `${-20 - Math.random() * 20}px`; // Start off-screen
+                confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                const size = Math.random() * 8 + 4; // size between 4px and 12px
+                confetti.style.width = `${size}px`;
+                confetti.style.height = `${size}px`;
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                confetti.style.animationDuration = `${Math.random() * 2 + 3}s`; // duration between 3s and 5s
+                confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+                
+                container.appendChild(confetti);
+
+                // Remove the element after animation to keep the DOM clean
+                setTimeout(() => {
+                    confetti.remove();
+                }, 5000); // A bit longer than max animation duration
+            }
+        }
+
+        // --- Game Logic ---
+        function handleGameCompletion() {
+            const completionMessage = {
+                en: `Congratulations! You've completed all the puzzles with a final score of ${score} points! You're now more aware about Aadhaar Seeding for DBT! Please visit the National Scholarship Portal: NSP 🎉`,
+                hi: `बधाई हो! आपने ${score} अंकों के अंतिम स्कोर के साथ सभी पहेलियाँ पूरी कर ली हैं! अब आप आधार सीडिंग और डीबीटी के बारे में अधिक जागरूक हैं! कृपया राष्ट्रीय छात्रवृत्ति पोर्टल: एनएसपी पर जाएँ 🎉`,
+                ta: `வாழ்த்துக்கள்! நீங்கள் ${score} புள்ளிகளுடன் எல்லா புதிர்களையும் முடித்துவிட்டீர்கள். ஆதார் விதைப்பு மற்றும் DBT பற்றி நீங்கள் இப்போது நன்கு அறிவீர்கள்! தேசிய கல்வி உதவித்தொகை போர்ட்டலைப் பார்வையிடவும்: NSP 🎉`
+            };
+            addMessage(completionMessage, 'bot');
+
+            setTimeout(() => {
+                const finalActionsDiv = document.createElement('div');
+                finalActionsDiv.id = 'final-actions';
+                finalActionsDiv.classList.add('p-4', 'bg-gray-700/80', 'rounded-xl', 'mt-4', 'text-center', 'border', 'border-indigo-500');
+                finalActionsDiv.innerHTML = `
+                    <p class="text-sm text-indigo-200 mb-4 font-semibold">
+                        Ready to take the next step? Check out the official scholarship portal.
+                    </p>
+                    <div class="flex flex-col sm:flex-row justify-center items-center gap-4">
+                        <button id="play-again-btn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-3 px-6 rounded-xl transition duration-300 w-full sm:w-auto">
+                            Play Again
+                        </button>
+                        <a href="https://scholarships.gov.in/" target="_blank" rel="noopener noreferrer" class="bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl transition duration-300 w-full sm:w-auto text-center inline-block">
+                            National Scholarship Portal: NSP
+                        </a>
+                    </div>
+                `;
+
+                chatContainer.appendChild(finalActionsDiv);
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                document.getElementById('play-again-btn').addEventListener('click', () => {
+                    finalActionsDiv.remove();
+                    init();
+                }, { once: true });
+            }, 1000);
+        }
+
+        function askNewQuestion() {
+            if (currentQuestionIndex >= allQuestions.length) {
+                handleGameCompletion();
+                return;
+            }
+            
+            const currentQuestion = allQuestions[currentQuestionIndex];
+            hintBtn.disabled = false;
+            
+            showTypingIndicator();
+            setTimeout(() => {
+                const isMultiLine = currentQuestion.question.en.includes('\n');
+                addMessage(currentQuestion.question, 'bot', isMultiLine);
+            }, 1200);
+        }
+
+        function handleUserInput() {
+            const text = userInput.value.trim().toLowerCase();
+            if (!text) return;
+
+            addMessage(userInput.value, 'user');
+            userInput.value = '';
+            
+            const currentQuestion = allQuestions[currentQuestionIndex];
+            
+            showTypingIndicator();
+            setTimeout(() => {
+                if (currentQuestion.answers.some(ans => text.includes(ans))) {
+                    score += CORRECT_ANSWER_SCORE;
+                    updateScoreDisplay();
+                    playCorrectSound();
+                    addMessage({en: "That's correct! Well done! 👏"}, 'bot');
+                    setTimeout(showInfoModal, 1000);
+                } else {
+                    addMessage({en: "Not quite. Give it another thought! 🤔"}, 'bot');
+                }
+            }, 1000);
+        }
+        
+        // --- Aadhaar Check Simulation Logic ---
+        function showAadhaarCheckOffer() {
+            const offerDiv = document.createElement('div');
+            offerDiv.classList.add('p-4', 'bg-gray-700/80', 'rounded-xl', 'mt-4', 'text-center', 'border', 'border-indigo-500');
+            offerDiv.innerHTML = `
+                <p class="text-white mb-4">Would you like to try a simulation of how to check your Aadhaar-Bank link status online?</p>
+                <button id="start-simulation-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-xl">Yes, let's practice!</button>
+            `;
+            chatContainer.appendChild(offerDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            document.getElementById('start-simulation-btn').addEventListener('click', () => {
+                offerDiv.remove();
+                showAadhaarCheckModal();
+            }, { once: true });
+        }
+        
+        function showAadhaarCheckModal() {
+            // Reset modal to step 1
+            aadhaarStep1.classList.remove('hidden');
+            aadhaarStep2.classList.add('hidden');
+            aadhaarStep3.classList.add('hidden');
+            aadhaarStep4.classList.add('hidden');
+            aadhaarNumberInput.value = '';
+            captchaInput.value = '';
+            otpInput.value = '';
+            aadhaarError.classList.add('hidden');
+            captchaError.classList.add('hidden');
+            otpError.classList.add('hidden');
+
+            aadhaarCheckModal.classList.remove('hidden');
+            setTimeout(() => {
+                aadhaarCheckModal.classList.remove('opacity-0');
+                aadhaarCheckModal.querySelector('.transform').classList.remove('scale-95');
+            }, 10);
+        }
+
+        function hideAadhaarCheckModal() {
+            aadhaarCheckModal.querySelector('.transform').classList.add('scale-95');
+            aadhaarCheckModal.classList.add('opacity-0');
+            setTimeout(() => {
+                aadhaarCheckModal.classList.add('hidden');
+            }, 300);
+        }
+        
+        function generateCaptcha() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            generatedCaptcha = result;
+            captchaCode.textContent = generatedCaptcha;
+        }
+
+        // --- Event Listeners ---
+        nextLevelBtn.addEventListener('click', () => {
+            hideInfoModal();
+            currentQuestionIndex++;
+            updateProgressBar();
+            updateLevelDisplay();
+            
+            if (currentQuestionIndex === 2) { // After the 2nd question, show the simulation offer
+                showAadhaarCheckOffer();
+            } else {
+                showTypingIndicator();
+                setTimeout(() => {
+                    addMessage({en: "Here's your next challenge!"}, 'bot');
+                    askNewQuestion();
+                }, 1000);
+            }
+        });
+
+        sendBtn.addEventListener('click', handleUserInput);
+        userInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleUserInput();
+            }
+        });
+
+        hintBtn.addEventListener('click', () => {
+            const currentQuestion = allQuestions[currentQuestionIndex];
+            showTypingIndicator();
+            setTimeout(() => {
+                addMessage(currentQuestion.hint, 'bot');
+                hintBtn.disabled = true;
+                score = Math.max(0, score - HINT_PENALTY); // Deduct points for hint
+                updateScoreDisplay();
+            }, 1000);
+        });
+        
+        // Aadhaar input auto-formatter
+        aadhaarNumberInput.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/\s/g, '');
+            if (value.length > 12) value = value.slice(0, 12);
+            let formattedValue = value.replace(/(\d{4})(?=\d)/g, '$1 ').trim();
+            e.target.value = formattedValue;
+        });
+
+        aadhaarNextBtn.addEventListener('click', () => {
+            const aadhaarVal = aadhaarNumberInput.value.replace(/\s/g, '');
+            if (aadhaarVal.length === 12 && /^\d+$/.test(aadhaarVal)) {
+                aadhaarError.classList.add('hidden');
+                aadhaarStep1.classList.add('hidden');
+                generateCaptcha();
+                aadhaarStep2.classList.remove('hidden');
+            } else {
+                aadhaarError.classList.remove('hidden');
+            }
+        });
+
+        captchaVerifyBtn.addEventListener('click', () => {
+            if (captchaInput.value.toLowerCase() === generatedCaptcha.toLowerCase()) {
+                captchaError.classList.add('hidden');
+                aadhaarStep2.classList.add('hidden');
+                aadhaarStep3.classList.remove('hidden');
+            } else {
+                captchaError.classList.remove('hidden');
+                generateCaptcha();
+            }
+        });
+        
+        otpVerifyBtn.addEventListener('click', () => {
+            if (otpInput.value.length === 6 && /^\d+$/.test(otpInput.value)) {
+                otpError.classList.add('hidden');
+                aadhaarStep3.classList.add('hidden');
+                aadhaarStep4.classList.remove('hidden');
+            } else {
+                otpError.classList.remove('hidden');
+            }
+        });
+
+        aadhaarCloseBtn.addEventListener('click', () => {
+            hideAadhaarCheckModal();
+            showTypingIndicator();
+            setTimeout(() => {
+                addMessage({en: "Great practice! Now, for your next real challenge..."}, 'bot');
+                askNewQuestion();
+            }, 500);
+        });
+
+        // --- Game Initialization ---
+        function init() {
+            // Clear chat
+            chatContainer.innerHTML = '';
+
+            const initialGreeting = {
+                en: "Hi! I'm RAWEN. Let's play a game to test your wits and learn something important! 🧠",
+                hi: "नमस्ते! मैं रावेन हूँ। अपनी बुद्धि का परीक्षण करने और कुछ महत्वपूर्ण सीखने के लिए एक खेल खेलते हैं! 🧠",
+                ta: "வணக்கம்! நான் ரேவன். உங்கள் அறிவைச் சோதித்து முக்கியமான ஒன்றைக் கற்றுக்கொள்ள ஒரு விளையாட்டு விளையாடுவோம்! 🧠"
+            };
+            
+            showTypingIndicator();
+            setTimeout(() => addMessage(initialGreeting, 'bot'), 1200);
+            
+            // Reset game state
+            currentQuestionIndex = 0;
+            score = 0;
+            updateScoreDisplay();
+            updateProgressBar();
+            updateLevelDisplay();
+            
+            const finalActions = document.getElementById('final-actions');
+            if(finalActions) finalActions.remove();
+
+            setTimeout(askNewQuestion, 2000);
+        }
+
+        // Start the game on page load
+        init();
+    </script>
+</body>
+</html>
